@@ -1,4 +1,4 @@
-const CACHE = 'shengyidian-v1';
+const CACHE = 'shengyidian-v2';
 const ASSETS = [
   './',
   './index.html',
