@@ -183,7 +183,7 @@
         </header>
 
         <div class="month-bar">
-          <span class="month-now">10月 <svg class="ic"><use href="#i-chevron-down"></use></svg></span>
+          <span class="month-now"><span id="detailMonthLabel">10月</span> <svg class="ic"><use href="#i-chevron-down"></use></svg></span>
           <span id="detailCount">共 0 笔</span>
         </div>
 
@@ -208,7 +208,7 @@
             <p class="eyebrow">INSIGHTS</p>
             <h1>统计</h1>
           </div>
-          <span class="month-pill">10月 · 2026</span>
+          <span class="month-pill" id="statsMonthPill">10月 · 2026</span>
         </header>
         <div id="statsRoot"></div>
       </section>
@@ -261,37 +261,51 @@
         </button>
       </div>
 
-      <div class="amount-display" id="amountDisplay">
-        <span class="yen">¥</span>
-        <span id="amountText">0</span>
-        <span class="caret"></span>
-      </div>
+      <div class="sheet-body">
+        <div class="amount-display" id="amountDisplay">
+          <span class="yen">¥</span>
+          <span id="amountText">0</span>
+          <span class="caret"></span>
+        </div>
 
-      <div class="cat-grid" id="catGrid"></div>
+        <div class="date-row">
+          <label class="date-chip">
+            <svg class="ic"><use href="#i-calendar"></use></svg>
+            <span id="addDateLabel">今天</span>
+            <input type="date" id="addDate" aria-label="记账日期" />
+          </label>
+          <span class="date-hint">可补记昨天以前的账</span>
+        </div>
 
-      <div class="segmented" id="wantSeg" role="group" aria-label="这笔消费属于">
-        <button type="button" data-want="0" class="active">需要</button>
-        <button type="button" data-want="1">想要</button>
-      </div>
-      <p class="type-hint" id="typeHint">生活必需，放心记。</p>
+        <div class="cat-grid" id="catGrid"></div>
 
-      <input class="note-input" id="noteInput" maxlength="24" placeholder="写点什么（可选）" autocomplete="off" />
+        <div class="segmented" id="wantSeg" role="group" aria-label="这笔消费属于">
+          <button type="button" data-want="0" class="active">需要</button>
+          <button type="button" data-want="1">想要</button>
+        </div>
+        <p class="type-hint" id="typeHint">生活必需，放心记。</p>
 
-      <div class="keypad" id="keypad">
-        <button class="key" data-key="1">1</button>
-        <button class="key" data-key="2">2</button>
-        <button class="key" data-key="3">3</button>
-        <button class="key" data-key="4">4</button>
-        <button class="key" data-key="5">5</button>
-        <button class="key" data-key="6">6</button>
-        <button class="key" data-key="7">7</button>
-        <button class="key" data-key="8">8</button>
-        <button class="key" data-key="9">9</button>
-        <button class="key" data-key=".">.</button>
-        <button class="key" data-key="0">0</button>
-        <button class="key" data-key="del" aria-label="删除">
-          <svg class="ic"><use href="#i-backspace"></use></svg>
-        </button>
+        <div class="note-row">
+          <button type="button" class="note-toggle" id="noteToggle">＋ 备注</button>
+          <input class="note-input" id="noteInput" maxlength="24" placeholder="写点什么（可选）" autocomplete="off" hidden />
+        </div>
+
+        <div class="keypad" id="keypad">
+          <button class="key" data-key="1">1</button>
+          <button class="key" data-key="2">2</button>
+          <button class="key" data-key="3">3</button>
+          <button class="key" data-key="4">4</button>
+          <button class="key" data-key="5">5</button>
+          <button class="key" data-key="6">6</button>
+          <button class="key" data-key="7">7</button>
+          <button class="key" data-key="8">8</button>
+          <button class="key" data-key="9">9</button>
+          <button class="key" data-key=".">.</button>
+          <button class="key" data-key="0">0</button>
+          <button class="key" data-key="del" aria-label="删除">
+            <svg class="ic"><use href="#i-backspace"></use></svg>
+          </button>
+        </div>
       </div>
 
       <button class="btn btn-primary save-btn" id="saveBtn">记下这笔</button>
