@@ -30,4 +30,4 @@ python -m http.server 8765
 
 纯静态 HTML / CSS / JavaScript，无构建步骤。PWA manifest、Service Worker、离线缓存与图标均已配置。
 
-> 演示账本固定在 2026 年 10 月，可在「我的 → 重置演示数据」恢复。
+> 第一次打开是空白账本，直接记自己的账。需要清空时在「我的 → 清空账本」点两次确认。
