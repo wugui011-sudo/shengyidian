@@ -1,0 +1,65 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#3579a5"/>
+      <stop offset="0.58" stop-color="#245b84"/>
+      <stop offset="1" stop-color="#153b59"/>
+    </linearGradient>
+    <radialGradient id="glow" cx="0.5" cy="0.5" r="0.5">
+      <stop offset="0" stop-color="#c6e8fa" stop-opacity=".5"/>
+      <stop offset="1" stop-color="#c6e8fa" stop-opacity="0"/>
+    </radialGradient>
+    <filter id="soft" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="10" stdDeviation="14" flood-color="#0b2236" flood-opacity=".25"/>
+    </filter>
+  </defs>
+
+  <rect width="512" height="512" fill="url(#bg)"/>
+  <circle cx="428" cy="76" r="168" fill="url(#glow)"/>
+  <circle cx="72" cy="432" r="126" fill="#f3b8c0" opacity=".07"/>
+  <circle cx="96" cy="120" r="5" fill="#dff2fd" opacity=".55"/>
+  <circle cx="428" cy="176" r="6" fill="#dff2fd" opacity=".4"/>
+  <circle cx="86" cy="354" r="4" fill="#f3b8c0" opacity=".65"/>
+
+  <circle cx="256" cy="238" r="158" fill="#f8f1e2" filter="url(#soft)"/>
+  <circle cx="256" cy="238" r="148" fill="none" stroke="#e8ddca" stroke-width="2"/>
+
+  <g transform="translate(111 76) scale(4.55) rotate(-3 32 34)">
+    <path d="M14.5 26C11 16 15 10 19.5 10c4.5 0 7.5 6 8 12" fill="#F0A9B4"/>
+    <path d="M49.5 26C53 16 49 10 44.5 10c-4.5 0-7.5 6-8 12" fill="#F0A9B4"/>
+    <path d="M17.5 23.5c-1.8-6 .2-9.7 2.5-9.7s4.2 3.4 4.7 8" fill="#E693A2"/>
+    <path d="M46.5 23.5c1.8-6-.2-9.7-2.5-9.7s-4.2 3.4-4.7 8" fill="#E693A2"/>
+    <path d="M9 33.5C9 21 19 12 32 12s23 9 23 21.5S46 53 32 53 9 46 9 33.5Z" fill="#F9CBD2"/>
+    <path d="M32 12c0-4 2.8-5.2 4.2-3.2" fill="none" stroke="#E693A2" stroke-width="1.8" stroke-linecap="round"/>
+    <ellipse cx="17.5" cy="40" rx="4.2" ry="2.6" fill="#EF98A7" opacity=".55"/>
+    <ellipse cx="46.5" cy="40" rx="4.2" ry="2.6" fill="#EF98A7" opacity=".55"/>
+    <circle cx="23.5" cy="32.5" r="2.1" fill="#40303A"/>
+    <circle cx="40.5" cy="32.5" r="2.1" fill="#40303A"/>
+    <circle cx="24.2" cy="31.7" r=".65" fill="#fff"/>
+    <circle cx="41.2" cy="31.7" r=".65" fill="#fff"/>
+    <ellipse cx="32" cy="41.5" rx="9.2" ry="6.8" fill="#F3AAB5"/>
+    <ellipse cx="28.8" cy="41.5" rx="1.25" ry="1.9" fill="#C96E7D"/>
+    <ellipse cx="35.2" cy="41.5" rx="1.25" ry="1.9" fill="#C96E7D"/>
+    <path d="M28.5 50.2c2.2 1.7 4.8 1.7 7 0" fill="none" stroke="#D98A98" stroke-width="1.6" stroke-linecap="round"/>
+  </g>
+
+  <g transform="translate(318 298) scale(2.06) rotate(3 32 40)" filter="url(#soft)">
+    <ellipse cx="12.5" cy="47.5" rx="7.2" ry="5" fill="#8FC9AF" transform="rotate(-18 12.5 47.5)"/>
+    <ellipse cx="51.5" cy="47.5" rx="7.2" ry="5" fill="#8FC9AF" transform="rotate(18 51.5 47.5)"/>
+    <path d="M32 17c13.5 0 23 8.7 23 19.5S46 51 32 51 9 46.2 9 36.5 18.5 17 32 17Z" fill="#79BBA0"/>
+    <path d="M32 22v24M21.5 28.5l21 14M42.5 28.5l-21 14" stroke="#5E9F87" stroke-width="1.4" opacity=".45" stroke-linecap="round"/>
+    <path d="M12.5 39.5c3 7 10.5 10.5 19.5 10.5s16.5-3.5 19.5-10.5" fill="none" stroke="#ADE0C9" stroke-width="2" opacity=".65" stroke-linecap="round"/>
+    <path d="M32 39.5c-2.5-3-6.4-5-6.4-7.8 0-2 1.6-3.4 3.5-3.4 1.2 0 2.2.7 2.9 1.6.7-.9 1.7-1.6 2.9-1.6 1.9 0 3.5 1.4 3.5 3.4 0 2.8-3.9 4.8-6.4 7.8Z" fill="#F8EDD8" opacity=".92"/>
+    <circle cx="32" cy="18" r="10.5" fill="#A9DCC5"/>
+    <path d="M32 8.5c0-3 1.8-5 4.5-5-.1 3-1.9 5-4.5 5Z" fill="#8DCDB0"/>
+    <path d="M32 8.5c-2.5 0-4.4-1.6-4.6-4.1 2.6-.4 4.4 1.2 4.6 4.1Z" fill="#8DCDB0"/>
+    <path d="M32 9V4" stroke="#6BAB8F" stroke-width="1.5" stroke-linecap="round"/>
+    <circle cx="28" cy="18" r="1.7" fill="#2C4A3F"/>
+    <circle cx="36" cy="18" r="1.7" fill="#2C4A3F"/>
+    <circle cx="28.5" cy="17.4" r=".55" fill="#fff"/>
+    <circle cx="36.5" cy="17.4" r=".55" fill="#fff"/>
+    <path d="M29.5 21.5c1.4 1.3 3.6 1.3 5 0" fill="none" stroke="#2C4A3F" stroke-width="1.3" stroke-linecap="round"/>
+    <ellipse cx="23.5" cy="21.5" rx="2.8" ry="1.9" fill="#F3B3BC" opacity=".7"/>
+    <ellipse cx="40.5" cy="21.5" rx="2.8" ry="1.9" fill="#F3B3BC" opacity=".7"/>
+  </g>
+</svg>
