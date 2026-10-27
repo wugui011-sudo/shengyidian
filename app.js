@@ -5,10 +5,18 @@
 
 'use strict';
 
-const TODAY = '2026-10-27';
-const MONTH = '2026-10';
-const MONTH_DAY_COUNT = 27;
-const STORAGE_KEY = 'shengyidian.prototype.v3';
+function dateKey(date) {
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
+}
+
+const NOW = new Date();
+const TODAY = dateKey(NOW);
+const MONTH = TODAY.slice(0, 7);
+const YEAR = NOW.getFullYear();
+const MONTH_NUM = NOW.getMonth() + 1;
+const ELAPSED_DAYS = NOW.getDate();
+const STORAGE_KEY = 'shengyidian.prototype.v4';
+const LEGACY_STORAGE_KEY = 'shengyidian.prototype.v3';
 const WEEK = ['日', '一', '二', '三', '四', '五', '六'];
 
 const CATS = {
@@ -54,6 +62,11 @@ const $$ = (sel, root = document) => Array.from(root.querySelectorAll(sel));
 
 function pad(n) {
   return String(n).padStart(2, '0');
+}
+
+function dateOffset(days) {
+  const d = new Date(NOW.getFullYear(), NOW.getMonth(), NOW.getDate() + days);
+  return dateKey(d);
 }
 
 function parseDate(str) {
@@ -227,24 +240,54 @@ function seedState() {
   };
 }
 
+function freshState() {
+  return {
+    version: 4,
+    monthBudget: 2800,
+    dayBudget: 100,
+    coolThreshold: 50,
+    expenses: [],
+    wishlist: [],
+    savedAmount: 0,
+    savedCount: 0,
+    settings: { reminder: true, overspend: true }
+  };
+}
+
+let storageMigrated = false;
+
 function loadState() {
   try {
-    const raw = localStorage.getItem(STORAGE_KEY);
+    const raw = localStorage.getItem(STORAGE_KEY) || localStorage.getItem(LEGACY_STORAGE_KEY);
     if (raw) {
       const parsed = JSON.parse(raw);
-      if (parsed && parsed.version === 3 && Array.isArray(parsed.expenses)) {
+      if (parsed && parsed.version === 4 && Array.isArray(parsed.expenses)) {
         return parsed;
+      }
+      if (parsed && parsed.version === 3 && Array.isArray(parsed.expenses)) {
+        // 从演示版升级：自动清掉 seed- 开头的演示账目，保留用户真正记过的账
+        const realExpenses = parsed.expenses.filter(item => !String(item.id).startsWith('seed-'));
+        const realWishlist = (parsed.wishlist || []).filter(item => !['w1', 'w2', 'w3'].includes(item.id));
+        const base = freshState();
+        base.monthBudget = Number(parsed.monthBudget) || base.monthBudget;
+        base.dayBudget = Number(parsed.dayBudget) || base.dayBudget;
+        base.coolThreshold = Number(parsed.coolThreshold) >= 0 ? Number(parsed.coolThreshold) : base.coolThreshold;
+        base.expenses = realExpenses;
+        base.wishlist = realWishlist;
+        base.settings = parsed.settings || base.settings;
+        storageMigrated = true;
+        return base;
       }
     }
   } catch (err) {
-    /* file:// 或隐私模式下 localStorage 可能不可用，直接使用演示数据 */
+    /* file:// 或隐私模式下 localStorage 可能不可用 */
   }
-  return seedState();
+  return freshState();
 }
 
 let state = loadState();
 let detailFilter = 'all';
-let draft = { amount: '', cat: 'food', want: false, note: '' };
+let draft = { amount: '', cat: 'food', want: false, note: '', date: TODAY };
 let pendingDraft = null;
 let cooldownTimer = null;
 let cooldownLeft = 10;
@@ -285,8 +328,9 @@ function sortTx(a, b) {
 
 function streakDays() {
   let streak = 0;
-  for (let d = 27; d >= 1; d--) {
+  for (let d = ELAPSED_DAYS; d >= 1; d--) {
     const date = `${MONTH}-${pad(d)}`;
+    if (!dayExpenses(date).length) break;
     if (dayTotal(date) <= state.dayBudget) streak++;
     else break;
   }
@@ -295,8 +339,9 @@ function streakDays() {
 
 function overBudgetDays() {
   let count = 0;
-  for (let d = 1; d <= MONTH_DAY_COUNT; d++) {
-    if (dayTotal(`${MONTH}-${pad(d)}`) > state.dayBudget) count++;
+  for (let d = 1; d <= ELAPSED_DAYS; d++) {
+    const date = `${MONTH}-${pad(d)}`;
+    if (dayExpenses(date).length && dayTotal(date) > state.dayBudget) count++;
   }
   return count;
 }
@@ -314,7 +359,13 @@ function renderHome() {
   const streak = streakDays();
 
   $('#homeDate').textContent = `${dayLabel(TODAY)} · ${weekdayLabel(TODAY)}`;
-  $('#homeGreeting').textContent = over ? '今天超了一点，明天慢一点' : '晚上好，今天守住了';
+  const hour = NOW.getHours();
+  const salutation = hour < 11 ? '早上好' : hour < 14 ? '中午好' : hour < 18 ? '下午好' : '晚上好';
+  $('#homeGreeting').textContent = over
+    ? '今天超了一点，明天慢一点'
+    : txs.length
+      ? `${salutation}，今天守住了`
+      : `${salutation}，记下第一笔吧`;
 
   const hero = $('#hero');
   hero.classList.toggle('over', over);
@@ -337,21 +388,28 @@ function renderHome() {
 
   $('#todayList').innerHTML = txs.length
     ? txs.map(txRow).join('')
-    : `<div class="empty-state">${mascot('pig')}<div>今天还没有记账，挺好。</div></div>`;
+    : `<div class="empty-state">${mascot('pig')}
+         <div>今天还没有记账</div>
+         <button class="empty-cta" data-empty-add>记第一笔</button>
+       </div>`;
   $('#todayMeta').textContent = `${txs.length} 笔 · ¥${fmt(total)}`;
 
   const avg = txs.length ? total / txs.length : 0;
   const wantTotal = sum(txs.filter(item => item.want));
-  const late = monthExpenses().filter(item => item.date >= '2026-10-21' && item.time >= '21:00');
+  const late = state.expenses.filter(item => item.date >= dateOffset(-6) && item.time >= '21:00');
   const lateTotal = sum(late);
 
-  $('#homeInsight').innerHTML = lateTotal > 0
-    ? `<span class="insight-ic">${ic('moon')}</span>
-       <span class="insight-copy"><b>晚 9 点后花了 ¥${fmt(lateTotal)}</b><p>夜里最容易松手，这周留意一下</p></span>
+  $('#homeInsight').innerHTML = !txs.length
+    ? `<span class="insight-ic">${ic('sparkles')}</span>
+       <span class="insight-copy"><b>今天还没有记账</b><p>点「+」补一笔，3 秒就好</p></span>
        ${ic('chevron-right')}`
-    : `<span class="insight-ic">${ic('sparkles')}</span>
-       <span class="insight-copy"><b>今天平均每笔 ¥${fmt(avg)}</b><p>想要消费 ¥${fmt(wantTotal)} · 占 ${total ? Math.round(wantTotal / total * 100) : 0}%</p></span>
-       ${ic('chevron-right')}`;
+    : lateTotal > 0
+      ? `<span class="insight-ic">${ic('moon')}</span>
+         <span class="insight-copy"><b>晚 9 点后花了 ¥${fmt(lateTotal)}</b><p>夜里最容易松手，这周留意一下</p></span>
+         ${ic('chevron-right')}`
+      : `<span class="insight-ic">${ic('sparkles')}</span>
+         <span class="insight-copy"><b>今天平均每笔 ¥${fmt(avg)}</b><p>想要消费 ¥${fmt(wantTotal)} · 占 ${total ? Math.round(wantTotal / total * 100) : 0}%</p></span>
+         ${ic('chevron-right')}`;
 }
 
 function txRow(item) {
@@ -375,8 +433,9 @@ function renderDetail() {
   const recordedDays = new Set(all.map(item => item.date)).size;
 
   $('#detailCount').textContent = `共 ${all.length} 笔`;
+  $('#detailMonthLabel').textContent = `${MONTH_NUM}月`;
   $('#detailTotal').textContent = fmt(total);
-  $('#detailAvg').textContent = `¥${fmt(total / MONTH_DAY_COUNT)}`;
+  $('#detailAvg').textContent = `¥${fmt(total / Math.max(1, ELAPSED_DAYS))}`;
   $('#detailRemain').textContent = money(remain);
   $('#detailDays').textContent = `${recordedDays} 天`;
 
@@ -396,7 +455,10 @@ function renderDetail() {
 
   const dates = Object.keys(groups).sort((a, b) => b.localeCompare(a));
   if (!dates.length) {
-    $('#detailGroups').innerHTML = `<div class="empty-state">${mascot('pig')}<div>这个筛选下还没有记录</div></div>`;
+    $('#detailGroups').innerHTML = `<div class="empty-state">${mascot('pig')}
+      <div>这个筛选下还没有记录</div>
+      <button class="empty-cta" data-empty-add>记第一笔</button>
+    </div>`;
     return;
   }
 
@@ -421,13 +483,25 @@ function renderStats() {
   const all = monthExpenses();
   const total = sum(all);
   const count = all.length;
-  const avg = total / MONTH_DAY_COUNT;
+  const avg = total / Math.max(1, ELAPSED_DAYS);
   const remain = state.monthBudget - total;
   const usedPct = state.monthBudget > 0 ? total / state.monthBudget * 100 : 0;
   const overDays = overBudgetDays();
 
+  $('#statsMonthPill').textContent = `${MONTH_NUM}月 · ${YEAR}`;
+
+  if (!count) {
+    $('#statsRoot').innerHTML = `<div class="empty-state" style="padding-top:60px;">
+      ${mascot('pig')}
+      <div>这个月还没有数据</div>
+      <p style="margin:5px 0 0;font-size:10px;color:var(--muted-2);">记下第一笔，趋势才有意义</p>
+      <button class="empty-cta" data-empty-add>记第一笔</button>
+    </div>`;
+    return;
+  }
+
   const days = [];
-  for (let d = 21; d <= 27; d++) days.push(`${MONTH}-${pad(d)}`);
+  for (let i = 6; i >= 0; i--) days.push(dateOffset(-i));
   const values = days.map(dayTotal);
   const maxValue = Math.max(state.dayBudget, ...values, 1) * 1.12;
   const budgetPct = state.dayBudget / maxValue * 100;
@@ -529,9 +603,9 @@ function renderMe() {
       <div class="me-id">
         <p class="eyebrow">MY LEDGER</p>
         <h1>我的</h1>
-        <p>记录第 ${recordedDays} 天 · 共 ${all.length} 笔</p>
+        <p>${recordedDays ? `记录第 ${recordedDays} 天 · 共 ${all.length} 笔` : '还没有记账'}</p>
       </div>
-      <span class="level-pill">${streak >= 7 ? '克制者' : '记录中'}</span>
+      <span class="level-pill">${streak >= 7 ? '克制者' : all.length ? '记录中' : '开始记录'}</span>
     </header>
 
     <section class="saved-card">
@@ -586,14 +660,14 @@ function renderMe() {
         <span class="row-main"><b>导出账单</b><small>CSV · 数据只保存在本机</small></span>
         ${ic('chevron-right')}
       </button>
-      <button class="settings-row" data-action="reset" id="resetBtn">
-        <span class="row-ic">${ic('refresh')}</span>
-        <span class="row-main"><b>重置演示数据</b><small>恢复成初始的 10 月账本</small></span>
+      <button class="settings-row danger" data-action="reset" id="resetBtn">
+        <span class="row-ic">${ic('trash')}</span>
+        <span class="row-main"><b>清空账本</b><small>删除所有记录，保留预算设置</small></span>
         ${ic('chevron-right')}
       </button>
     </div>
 
-    <p class="footnote">省一点 · 交互原型 v1.0 · 不上传任何数据</p>
+    <p class="footnote">省一点 · v1.1 · 不上传任何数据</p>
   `;
 }
 
@@ -669,8 +743,15 @@ function toast(message) {
 /* ---------------- 记一笔 ---------------- */
 
 function openAdd(cat = 'food', presetWant = false) {
-  draft = { amount: '', cat, want: presetWant, note: '' };
+  draft = { amount: '', cat, want: presetWant, note: '', date: TODAY };
+  const dateInput = $('#addDate');
+  dateInput.min = `${MONTH}-01`;
+  dateInput.max = TODAY;
+  dateInput.value = TODAY;
+  $('#addDateLabel').textContent = '今天';
   $('#noteInput').value = '';
+  $('#noteInput').hidden = true;
+  $('#noteToggle').hidden = false;
   updateAddUI();
   openSheet($('#addSheet'));
 }
@@ -687,6 +768,7 @@ function formatInput(value) {
 
 function updateAddUI() {
   $('#amountText').textContent = formatInput(draft.amount);
+  $('#addDateLabel').textContent = draft.date === TODAY ? '今天' : dayLabel(draft.date);
   $$('#wantSeg button').forEach(btn => {
     btn.classList.toggle('active', (btn.dataset.want === '1') === draft.want);
   });
@@ -746,7 +828,8 @@ function submitAdd() {
     cat: draft.cat,
     amount: Number(amount.toFixed(2)),
     want: draft.want,
-    note: draft.note.trim()
+    note: draft.note.trim(),
+    date: draft.date || TODAY
   };
   if (payload.want && payload.amount >= state.coolThreshold) {
     startCooldown(payload);
@@ -758,11 +841,12 @@ function submitAdd() {
 function commitExpense(payload) {
   const now = new Date();
   const time = `${pad(now.getHours())}:${pad(now.getMinutes())}`;
+  const date = payload.date || TODAY;
   const note = payload.note || '';
   const title = note || DEFAULT_TITLES[payload.cat] || '一笔支出';
   state.expenses.push({
     id: uid(),
-    date: TODAY,
+    date,
     time,
     cat: payload.cat,
     title,
@@ -774,6 +858,11 @@ function commitExpense(payload) {
   persist();
   closeSheets();
   renderAll();
+  go('home');
+  if (date !== TODAY) {
+    toast(`已补记到 ${dayLabel(date)} · ¥${fmt(payload.amount)}`);
+    return;
+  }
   const spent = sum(todayExpenses());
   const remain = state.dayBudget - spent;
   toast(remain >= 0
@@ -937,7 +1026,7 @@ function exportCSV() {
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
-    link.download = '省一点-账单-2026-10.csv';
+    link.download = `省一点-账单-${MONTH}.csv`;
     document.body.appendChild(link);
     link.click();
     setTimeout(() => {
@@ -957,7 +1046,7 @@ function handleReset(button) {
     resetArmed = true;
     button.classList.add('danger');
     const label = button.querySelector('b');
-    if (label) label.textContent = '再点一次确认重置';
+    if (label) label.textContent = '再点一次确认清空';
     resetTimer = setTimeout(() => {
       resetArmed = false;
       renderMe();
@@ -966,11 +1055,17 @@ function handleReset(button) {
   }
   clearTimeout(resetTimer);
   resetArmed = false;
-  state = seedState();
+  state.expenses = [];
+  state.wishlist = [];
+  state.savedAmount = 0;
+  state.savedCount = 0;
   persist();
+  try {
+    localStorage.removeItem(LEGACY_STORAGE_KEY);
+  } catch (err) { /* 忽略 */ }
   renderAll();
   go('home');
-  toast('演示数据已重置');
+  toast('账本已清空，开始记自己的账');
 }
 
 /* ---------------- 事件绑定 ---------------- */
@@ -996,6 +1091,10 @@ function bindEvents() {
   });
 
   $('#todayList').addEventListener('click', event => {
+    if (event.target.closest('[data-empty-add]')) {
+      openAdd('food');
+      return;
+    }
     const button = event.target.closest('[data-txid]');
     if (button) openTxn(button.dataset.txid);
   });
@@ -1011,8 +1110,16 @@ function bindEvents() {
   });
 
   $('#detailGroups').addEventListener('click', event => {
+    if (event.target.closest('[data-empty-add]')) {
+      openAdd('food');
+      return;
+    }
     const button = event.target.closest('[data-txid]');
     if (button) openTxn(button.dataset.txid);
+  });
+
+  $('#statsRoot').addEventListener('click', event => {
+    if (event.target.closest('[data-empty-add]')) openAdd('food');
   });
 
   $('#catGrid').addEventListener('click', event => {
@@ -1031,6 +1138,20 @@ function bindEvents() {
 
   $('#noteInput').addEventListener('input', event => {
     draft.note = event.target.value;
+  });
+
+  $('#noteToggle').addEventListener('click', () => {
+    const input = $('#noteInput');
+    $('#noteToggle').hidden = true;
+    input.hidden = false;
+    input.focus();
+  });
+
+  $('#addDate').addEventListener('change', event => {
+    if (event.target.value) {
+      draft.date = event.target.value;
+      updateAddUI();
+    }
   });
 
   $('#keypad').addEventListener('click', event => {
@@ -1111,13 +1232,24 @@ function boot() {
   if (params.get('reset') === '1') {
     try {
       localStorage.removeItem(STORAGE_KEY);
+      localStorage.removeItem(LEGACY_STORAGE_KEY);
     } catch (err) { /* 忽略 */ }
-    state = seedState();
+    state = freshState();
   }
 
   renderCatGrid();
   bindEvents();
   renderAll();
+  const clock = $('.statusbar .time');
+  if (clock) clock.textContent = `${pad(NOW.getHours())}:${pad(NOW.getMinutes())}`;
+
+  if (storageMigrated) {
+    persist();
+    try {
+      localStorage.removeItem(LEGACY_STORAGE_KEY);
+    } catch (err) { /* 忽略 */ }
+    setTimeout(() => toast('演示账本已清理，可以开始记自己的账了'), 500);
+  }
 
   const hash = location.hash.replace('#', '');
   go(['home', 'detail', 'stats', 'me'].includes(hash) ? hash : 'home');
